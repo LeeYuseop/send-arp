@@ -15,7 +15,7 @@ struct EthArpPacket {
 void usage();
 EthArpPacket makePacket(char *EthSmac, char *EthDmac, char *ArpSmac,
 	char *ArpSip, char *ArpTmac, char *ArpTip, int ArpHdrType);
-void sendPacket(pcap_t *handle, EthArpPacket *packet);
+bool sendPacket(pcap_t *handle, EthArpPacket *packet);
 bool receiveMac(char *ipS, pcap_t *handle, char *macS);
 
 int main(int argc, char* argv[]) {
@@ -31,8 +31,8 @@ int main(int argc, char* argv[]) {
 	char myIp[16], myMac[18];
 	getIPAddress(myIp, dev);
 	getMacAddress(myMac, dev);
-//	printf("myIp : %s\n", myIp);
-//	printf("myMac : %s\n", myMac);
+	printf("myIp : %s\n", myIp);
+	printf("myMac : %s\n", myMac);
 
 
 
@@ -48,22 +48,17 @@ int main(int argc, char* argv[]) {
 		char *senderIp = argv[i];
 		char *targetIp = argv[i+1];
 		char senderMac[18];
-//		printf("%d's sender IP : %s/\n", i/2, senderIp);
-//		printf("%d's target IP : %s/\n", i/2, targetIp);
+
+		printf("#%d\n", i/2);
 
 		EthArpPacket packet;
 
 		packet = makePacket(myMac, mac1, myMac, myIp, mac0, senderIp, ArpHdr::Request);
-		sendPacket(handle, &packet);
+		if(!sendPacket(handle, &packet)) continue;
 
-		if(!receiveMac(senderIp, handle, senderMac))
-			continue;
-		
-//		printf("%s\n", senderMac);
+		if(!receiveMac(senderIp, handle, senderMac)) continue;
 
 		packet = makePacket(myMac, senderMac, myMac, targetIp, senderMac, senderIp, ArpHdr::Reply);
-time_t t1=time(NULL);
-
 		sendPacket(handle, &packet);
 	}
 
@@ -96,18 +91,21 @@ EthArpPacket makePacket(char *EthSmac, char *EthDmac, char *ArpSmac,
 	return packet;
 }
 
-void sendPacket(pcap_t *handle, EthArpPacket *packet){
+bool sendPacket(pcap_t *handle, EthArpPacket *packet){
 	int res = pcap_sendpacket(handle, reinterpret_cast<const u_char*>(packet), sizeof(EthArpPacket));
 
 	if (res != 0) {
 		fprintf(stderr, "pcap_sendpacket return %d error=%s\n", res, pcap_geterr(handle));
+		return false;
 	}
+	printf("success to send a packet!\n");
+	return true;
 }
 
 bool receiveMac(char *ipS, pcap_t *handle, char *macS){
 	time_t t1 = time(NULL);
 
-	while(time(NULL) - t1 < 10 || true){
+	while(time(NULL) - t1 < 10){
 		struct pcap_pkthdr *header;
 		const u_char *packet;
 		int res = pcap_next_ex(handle, &header, &packet);
@@ -118,20 +116,18 @@ bool receiveMac(char *ipS, pcap_t *handle, char *macS){
 		}
 
 		EthArpPacket *ethArpPacket = (EthArpPacket *)packet;
-//		printf("%04X\n", ethArpPacket->eth_.type_);
 
-		if(ethArpPacket->eth_.type_ != 0x0608)//EthHdr::Arp)
+		if(ethArpPacket->eth_.type_ != 0x0608)   // EthHdr::Arp
 			continue;
 
-//		std::cout << std::string(ethArpPacket->arp_.smac_) << '\n';
 		Ip ip = ethArpPacket->arp_.sip_;
-//		std::cout << ethArpPacket->arp_.sip() << '\n';
 		if(strcmp(ipS, std::string(ip).c_str()) == 0){
 			Mac mac = ethArpPacket->arp_.smac_;
 			strcpy(macS, std::string(mac).c_str());
-//printf("Oh year~!\n");
+			printf("receive the packet!\n");
 			return true;
 		}
 	}
+	printf("fail to receive the packet\n");
 	return false;
 }
