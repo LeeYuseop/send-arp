@@ -10,8 +10,9 @@ struct Ip final {
 	// constructor
 	//
 	Ip() {}
-	Ip(const uint32_t r) : ip_(r) {}
+//	Ip(const uint32_t r) : ip_(r) {}
 	Ip(const std::string r);
+	Ip(const u_long r);
 
 	//
 	// casting operator

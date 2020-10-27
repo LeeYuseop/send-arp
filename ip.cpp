@@ -1,14 +1,20 @@
 #include "ip.h"
 #include <cstdio>
+#include <iostream>
 
 Ip::Ip(const std::string r) {
 	unsigned int a, b, c, d;
 	int res = sscanf(r.c_str(), "%u.%u.%u.%u", &a, &b, &c, &d);
 	if (res != SIZE) {
+		std::cout << r;
 		fprintf(stderr, "Ip::Ip sscanf return %d r=%s\n", res, r.c_str());
 		return;
 	}
 	ip_ = (a << 24) | (b << 16) | (c << 8) | d;
+}
+
+Ip::Ip(const u_long r) {
+	ip_ = (unsigned int)r;
 }
 
 Ip::operator std::string() const {
